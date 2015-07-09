@@ -1,0 +1,135 @@
+<html>
+  <head>
+    <script type="text/javascript" src="https://www.google.com/jsapi?autoload={'modules':[{'name':'visualization','version':'1','packages':['corechart']}]}"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script type="text/javascript" src="/javascripts/drawChart.js"></script>
+    <script type="text/javascript" src="/javascripts/smoothie.js"></script>
+    <script type="text/javascript" src="/javascripts/html2canvas.js"></script>
+    <script type="text/javascript" src="/javascripts/utils.js"></script>
+
+    <script type="text/javascript">
+    	var socket = io();
+    	var max1Bid, min1Ask, max2Bid, min2Ask;
+
+		socket.on('offers', function(issuer1BidData, issuer1AskData, issuer2BidData, issuer2AskData)
+		{
+			drawChart(issuer1BidData, issuer1AskData, issuer2BidData, issuer2AskData);
+  		});
+
+		socket.on('balances', function(issuer1, issuer2, xrp)
+		{
+			document.getElementById('balanceRatio').value = (issuer1 / (issuer1 + issuer2)).toFixed(2);
+			document.getElementById('issuer1Balance').value = issuer1.toFixed(2);
+			document.getElementById('issuer2Balance').value = issuer2.toFixed(2);
+			document.getElementById('xrpBalance').value = xrp.toFixed(2);
+  		});
+
+ 		socket.on('profits', function(forward, backward)
+		{
+			document.getElementById('forwardProfit').value = forward.toFixed(3) + '%';
+			document.getElementById('backwardProfit').value = backward.toFixed(3) + '%';
+  		});
+
+ 		socket.on('trade', function(tradeSize, rate1, rate2)
+		{
+			var tradeString;
+
+			if(rate1 > rate2)
+			{
+				tradeString = 'Sold Issuer 1 at ' + rate1 + ' and bought Issuer 2 at ' + rate2 + ' Trade Size: ' + tradeSize + '\n';
+			}
+			else
+			{
+				tradeString = 'Sold Issuer 2 at ' + rate2 + ' and bought Issuer 1 at ' + rate1 + ' Trade Size: ' + tradeSize + '\n';
+			}
+
+			tradeString += 'Issuer 1: ' + max1Bid + ' - ' + min1Ask + '     Issuer 2: ' + max2Bid + ' - ' + min2Ask;
+
+			document.getElementById('tradeLog').value += '\n' + tradeString;
+
+			saveScreenshot();
+  		});
+
+  		function saveScreenshot()
+  		{
+  			html2canvas(document.body, { onrendered: function(canvas)
+  			{
+  				document.getElementById('save_as_image').href = canvas.toDataURL();
+  				document.getElementById('save_as_image').download = formatDateTimeForFilename(new Date()) + 'trade_snapshot.png';
+  				document.getElementById('save_as_image').click();
+  			}});
+  		}
+    </script>
+
+  	<title>Cross Issuer Bot v0.05</title>
+  </head>
+  <body>
+  	<a id='save_as_image'></a>
+
+  	<div>
+  		Balance Ratio:    <input type='text' id='balanceRatio' style='color: black' size='2' disabled/>
+  		Issuer 1 Balance: <input type='text' id='issuer1Balance' style='background-color: #FF8080;color: black' size='8' disabled/>
+  		Issuer 2 Balance: <input type='text' id='issuer2Balance' size='8' style='background-color: #8080FF;color: black' disabled/>
+  		XRP Balance:      <input type='text' id='xrpBalance' size='12' style='color: black' disabled/>
+  		Buy 1 Sell 2 Profit:   <input type='text' id='forwardProfit' size='8' disabled/>
+  		Buy 2 Sell 1 Profit:   <input type='text' id='backwardProfit' size='8' disabled/>
+  	</div>
+
+    <div><canvas id="streamCanvas" width="1300" height="300"></canvas></div>
+
+	<div><input type='text' id='vmax' size='6'/><div id="offerChart" style="width: 1300px; height: 300px; background-color:#000000"></div></div>
+	<div style='width: 1300px; height: 30px;'>
+		<input type='text' id='vmin' size='6'/>
+		<input type='text' id='hmin' size='6'/>
+		<input type='text' id='hmax' style='float: right' size='6'/>
+	</div>
+	<div>
+	<textarea id="tradeLog" style="overflow-y:scroll;resize:none;width:1300px;height:300px;"></textarea>
+	</div>
+
+    <script type="text/javascript">
+		//function doForwardTrade()
+		//{
+		//	socket.emit('forwardTradeButtonClick', document.getElementById('tradeSize').value);
+		//}
+
+		//function doBackwardTrade()
+		//{
+		//	socket.emit('backwardTradeButtonClick', document.getElementById("tradeSize").value);
+		//}
+
+		socket.on('spreads', function(maxIssuer1Bid, minIssuer1Ask, maxIssuer2Bid, minIssuer2Ask)
+		{
+			max1Bid = maxIssuer1Bid;
+			min1Ask = minIssuer1Ask;
+			max2Bid = maxIssuer2Bid;
+			min2Ask = minIssuer2Ask;
+
+			line1.append(new Date().getTime(), maxIssuer1Bid);
+			line2.append(new Date().getTime(), minIssuer1Ask);
+			line3.append(new Date().getTime(), maxIssuer2Bid);
+			line4.append(new Date().getTime(), minIssuer2Ask);
+		});
+
+		var line1 = new TimeSeries();
+		var line2 = new TimeSeries();
+		var line3 = new TimeSeries();
+		var line4 = new TimeSeries();
+
+		function myYRangeFunction(range)
+		{
+			var min = range.min - 0.1 * (range.max - range.min);
+			var max = range.max + 0.1 * (range.max - range.min);
+			return {min: min, max: max};
+		}
+
+		var smoothie = new SmoothieChart({ millisPerPixel:200, grid:{strokeStyle:'transparent',borderVisible:false}, yRangeFunction:myYRangeFunction });
+		smoothie.addTimeSeries(line1, { strokeStyle: 'rgb(255, 0, 0)', lineWidth: 3 });
+		smoothie.addTimeSeries(line2, { strokeStyle: 'rgb(255, 0, 0)', lineWidth: 3 });
+		smoothie.addTimeSeries(line3, { strokeStyle: 'rgb(0, 0, 255)', lineWidth: 3 });
+		smoothie.addTimeSeries(line4, { strokeStyle: 'rgb(0, 0, 255)', lineWidth: 3 });
+
+		smoothie.streamTo(document.getElementById("streamCanvas"), 1000);
+    </script>
+  </body>
+</html>

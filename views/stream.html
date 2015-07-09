@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Cross Issuer Bot</title>
+    <script type="text/javascript" src="/javascripts/smoothie.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+	<script>
+	  var socket = io();
+	</script>
+  </head>
+  <body>
+
+    <h1>Cross Issuer Bot v0.03</h1>
+
+    <canvas id="mycanvas" width="600" height="200"></canvas>
+
+    <script type="text/javascript">
+    	function doForwardTrade()
+    	{
+			socket.emit('forwardTradeButtonClick', document.getElementById('tradeSize').value);
+    	}
+
+		function doBackwardTrade()
+		{
+			socket.emit('backwardTradeButtonClick', document.getElementById("tradeSize").value);
+    	}
+
+    	socket.on('spreads', function(maxIssuer1Bid, minIssuer1Ask, maxIssuer2Bid, minIssuer2Ask)
+    	{
+	    	line1.append(new Date().getTime(), maxIssuer1Bid);
+	    	line2.append(new Date().getTime(), minIssuer1Ask);
+	    	line3.append(new Date().getTime(), maxIssuer2Bid);
+	    	line4.append(new Date().getTime(), minIssuer2Ask);
+  		});
+
+  		//socket.on('profits', function(forward, backward)
+  		//{
+  		//	document.getElementById("forwardProfit").value = forward;
+  		//	document.getElementById("backwardProfit").value = backward;
+  		//});
+
+      var line1 = new TimeSeries();
+      var line2 = new TimeSeries();
+      var line3 = new TimeSeries();
+      var line4 = new TimeSeries();
+
+	  function myYRangeFunction(range)
+	  {
+	    var min = range.min - 0.1 * (range.max - range.min);
+	    var max = range.max + 0.1 * (range.max - range.min);
+	    return {min: min, max: max};
+	  }
+
+      var smoothie = new SmoothieChart({ millisPerPixel:200, grid:{strokeStyle:'transparent',borderVisible:false}, yRangeFunction:myYRangeFunction });
+      smoothie.addTimeSeries(line1, { strokeStyle: 'rgb(255, 0, 0)', lineWidth: 3 });
+      smoothie.addTimeSeries(line2, { strokeStyle: 'rgb(255, 0, 0)', lineWidth: 3 });
+      smoothie.addTimeSeries(line3, { strokeStyle: 'rgb(0, 0, 255)', lineWidth: 3 });
+      smoothie.addTimeSeries(line4, { strokeStyle: 'rgb(0, 0, 255)', lineWidth: 3 });
+
+      smoothie.streamTo(document.getElementById("mycanvas"), 1000);
+    </script>
+
+	<br><br>
+	Forward Profit (%): <input type='text' id='forwardProfit' name='forwardProfit'/><input id="forwardTradeButton" type="button" value="Place Forward Trade" onclick="doForwardTrade();" />
+	<br><br>
+	Backward Profit (%): <input type='text' id='backwardProfit' name='backwardProfit'/><input id="backwardTradeButton" type="button" value="Place Backward Trade" onclick="doBackwardTrade();" />
+	<br><br>
+	Trade Size ($): <input type='text' id='tradeSize' name='tradeSize'/>
+  </body>
+</html>
