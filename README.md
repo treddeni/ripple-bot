@@ -12,6 +12,8 @@ Example: node ./bin/www config 8000
 
 You will need to have a file named config.js (or [config name].js) in the configs directory.
 
+You will need to add your Ripple credentials to the login.js file.
+
 <h3>UI</h3>
 
 The streaming plot at the top shows a stream of the bid ask spreads for the currency and issuers selected in the config file.  The spread for each issuer is shown in a different color.
