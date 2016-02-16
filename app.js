@@ -1,3 +1,11 @@
+if(process.argv.length < 3 || process.argv[2] == '--help' || process.argv[2] == '-help' || process.argv[2] == 'help' || process.argv[2] == '-h') {
+    console.log("Usage: node ./bin/www [config filename] [port number]");
+    console.log("Example: node ./bin/www config 8000");
+    console.log("You will need to have a file named config.js (or [config name].js) in the configs directory.");
+    console.log("You will need to add your Ripple credentials to the login.js file.");
+    process.exit();
+}
+
 var express = require('express');
 var path = require('path');
 var favicon = require('serve-favicon');
